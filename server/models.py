@@ -12,48 +12,54 @@ metadata = MetaData(
 
 db = SQLAlchemy(metadata=metadata)
 
-
-class Restaurant(db.Model, SerializerMixin):
-    __tablename__ = "restaurants"
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String)
-    address = db.Column(db.String)
-
-    # add relationship
-
-    # add serialization rules
-
-    def __repr__(self):
-        return f"<Restaurant {self.name}>"
-
-
-class Pizza(db.Model, SerializerMixin):
-    __tablename__ = "pizzas"
+class Pizza(db.Model):
+    __tablename__ = 'pizzas'
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String)
-    ingredients = db.Column(db.String)
+    name = db.Column(db.String(50), nullable=False)
+    ingredients = db.Column(db.String(255), nullable=False)
 
-    # add relationship
+    # Define the relationship with RestaurantPizza
+    restaurant_pizzas = db.relationship('RestaurantPizza', backref='pizza', lazy=True)
 
-    # add serialization rules
+    def serialize(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "ingredients": self.ingredients
+        }
 
-    def __repr__(self):
-        return f"<Pizza {self.name}, {self.ingredients}>"
-
-
-class RestaurantPizza(db.Model, SerializerMixin):
-    __tablename__ = "restaurant_pizzas"
+class RestaurantPizza(db.Model):
+    __tablename__ = 'restaurant_pizzas'
 
     id = db.Column(db.Integer, primary_key=True)
-    price = db.Column(db.Integer, nullable=False)
+    price = db.Column(db.Float, nullable=False)
 
-    # add relationships
+    # Define foreign keys for the relationships with Restaurant and Pizza
+    restaurant_id = db.Column(db.Integer, db.ForeignKey('restaurants.id'), nullable=False)  # noqa: E501
+    pizza_id = db.Column(db.Integer, db.ForeignKey('pizzas.id'), nullable=False)
 
-    # add serialization rules
+    def serialize(self):
+        return {
+            "id": self.id,
+            "price": self.price,
+            "pizza": self.pizza.serialize(),
+            "restaurant": self.restaurant.serialize()
+        }
 
-    # add validation
+class Restaurant(db.Model):
+    __tablename__ = 'restaurants'
 
-    def __repr__(self):
-        return f"<RestaurantPizza ${self.price}>"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False)
+    address = db.Column(db.String(255), nullable=False)
+
+    # Define the relationship with RestaurantPizza
+    restaurant_pizzas = db.relationship('RestaurantPizza', backref='restaurant', lazy=True)  # noqa: E501
+
+    def serialize(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "address": self.address
+        }
